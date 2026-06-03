@@ -1,0 +1,1 @@
+"""Manual workspace calibration placeholder."""

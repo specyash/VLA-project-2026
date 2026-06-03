@@ -1,0 +1,1 @@
+"""Webcam camera source placeholder."""

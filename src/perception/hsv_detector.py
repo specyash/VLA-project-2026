@@ -1,0 +1,1 @@
+"""HSV contour detector placeholder."""
