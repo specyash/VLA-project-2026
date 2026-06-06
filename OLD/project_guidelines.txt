@@ -1,0 +1,293 @@
+Course Project 
+Autonomous Object Sorting with Explicit 
+Perception–Action Pipelines 
+1. Project Goal  
+Design and demonstrate an autonomous robotic system that sorts tabletop objects into bins 
+based on visually observable attributes, using an explicit perception–action pipeline. 
+The primary objective is reliable system integration, not maximal perceptual sophistication. 
+2. Mandatory Task Definition 
+Each team must build a system that: 
+1.​ Detects multiple objects on a tabletop 
+2.​ Classifies each object using two primary visual attribute 
+3.​ Picks objects using a calibrated robotic manipulator 
+4.​ Places each object into the correct bin 
+5.​ Operates autonomously from start to finish 
+3. Allowed Attributes 
+Each team must choose exactly two of the following as the primary sorting attribute: 
+Allowed (Core) 
+●​ Color (e.g., red vs blue) 
+●​ Visual marker presence (marker vs no marker) 
+Optional Secondary Attribute 
+●​ Simple shape (circle vs rectangle) 
+Not Allowed as Primary 
+●​ Metric size 
+●​ Surface defects 
+●​ Material classification 
+Rationale: ensures teams reach full autonomy by Week 6–7. 
+4. System Architecture Requirements 
+All systems must include explicit modules for: 
+(A) Camera Calibration 
+●​ Intrinsic calibration 
+●​ Camera-to-robot extrinsic calibration 
+●​ Demonstrated mapping from image to robot frame 
+(B) Object Detection 
+●​ Image segmentation or bounding box detection 
+●​ Object-centric representation 
+(C) Attribute Classification 
+●​ Deterministic or classical ML baseline required 
+●​ Classification confidence must be computed or estimated 
+(D) Task Logic 
+●​ Deterministic mapping from attribute → bin 
+●​ Execution ordering 
+●​ Retry logic (minimum 1 retry per object) 
+(E) Manipulation 
+●​ Top-down grasp planning 
+●​ Pre-grasp → grasp → place sequence 
+●​ Fixed bin drop poses 
+5. Vision–Language–Action Models 
+Policy Statement 
+Vision–Language–Action models may be used only as an optional, advanced 
+decision-making component.​
+They may not replace calibration, object detection, grasp planning, or motion 
+execution. 
+Allowed VLA Usage 
+●​ Attribute reasoning from cropped object images 
+●​ Resolving ambiguous classifications 
+●​ Comparing symbolic rules vs learned reasoning 
+Explicitly Disallowed 
+●​ End-to-end image → action generation 
+●​ Replacing geometric grasp computation 
+●​ Using VLA outputs without baseline comparison 
+6. Required Baseline 
+Before any VLA credit is awarded, teams must demonstrate: 
+●​ A fully working classical pipeline 
+●​ Successful sorting of at least 10 objects with ≥80% success rate 
+VLAs are evaluated only as overlays or comparisons. 
+7. Milestones 
+Week 
+Deliverable 
+2 
+Calibration + object detection demo 
+4 
+Attribute classification offline 
+5 
+Single-object pick-and-place 
+6 
+End-to-end sorting (single attribute) 
+8 
+Robustness testing 
+10 
+Final demo & report 
+ 
+8. Evaluation Criteria 
+Category 
+Weight 
+End-to-end autonomy 
+30% 
+Manipulation reliability 
+25% 
+Perception correctness 
+20% 
+System design & clarity 
+15% 
+Report & analysis 
+10% 
+Advanced extensions (VLA / 
+learning) 
++10% 
+bonus 
+ 
+9. Definition of Success 
+A project is considered successful if: 
+●​ The robot sorts ≥80% of objects correctly 
+●​ No manual intervention occurs during execution 
+●​ Failures are detected and handled programmatically 
+●​ System behavior can be clearly explained 
+ 
+Course Project FAQ 
+Course Project FAQ 
+Autonomous Object Sorting Project 
+(Robot Perception and Manipulation) 
+1. What is the main goal of this project? 
+The goal is to build a fully autonomous perception–action system that: 
+●​ Sees objects 
+●​ Classifies them using a visual attribute 
+●​ Picks them with a robot 
+●​ Places them into correct bins 
+The focus is system integration and robustness, not just perception or learning. 
+2. How many attributes do we need to sort by? 
+You must choose exactly two primary attributes: 
+●​ Color and 
+●​ Visual marker presence 
+You may optionally add one or more secondary attributes (e.g., simple shape) for bonus credit. 
+Sorting by size or defects is not allowed as the primary task. 
+3. Can we use deep learning or pretrained models? 
+Yes, but only after a classical baseline works. 
+You must first demonstrate: 
+●​ Classical perception 
+●​ Explicit calibration 
+●​ Deterministic task logic 
+●​ Reliable pick-and-place 
+Learning-based methods are evaluated on insight and comparison, not performance alone. 
+4. Can we use Vision–Language–Action (VLA) 
+models? 
+Yes, optionally and in a limited role. 
+Allowed: 
+●​ Attribute reasoning 
+●​ Resolving ambiguous classifications 
+●​ Comparing rule-based logic vs learned reasoning 
+Not allowed: 
+●​ End-to-end image → action pipelines 
+●​ Replacing calibration or grasp planning 
+●​ Prompt-only manipulation 
+If your system fails without the VLA, you will not receive core credit. 
+5. Can we use YOLO, SAM, or similar vision libraries? 
+Yes. 
+However: 
+●​ You must understand and explain how outputs are used 
+●​ You must justify thresholds, parameters, and failures 
+●​ You may not treat the model as a black box 
+You are graded on system understanding, not API usage. 
+6. Do we need to handle failures? 
+Yes. 
+At minimum, your system must: 
+●​ Detect a failed grasp or drop 
+●​ Retry at least once 
+●​ Continue autonomously 
+Manual intervention during the demo is not allowed. 
+7. How “robust” does the system need to be? 
+A successful system: 
+●​ Sorts at least 80% of objects correctly 
+●​ Runs without human input 
+●​ Handles minor perception or grasp errors gracefully 
+Perfect accuracy is not required; controlled recovery is. 
+8. Can we simplify the manipulation? 
+Yes — and you should. 
+●​ Top-down grasps only 
+●​ Fixed bin locations 
+●​ Predefined place poses 
+●​ No force or tactile sensing required 
+Simple, reliable manipulation scores higher than complex but fragile approaches. 
+9. How will the project be graded? 
+You are graded primarily on: 
+●​ End-to-end autonomy 
+●​ Manipulation reliability 
+●​ Perception correctness 
+●​ System clarity 
+Advanced methods (learning / VLA) are bonus only. 
+10. What causes projects to lose marks most often? 
+●​ No working baseline 
+●​ Over-reliance on black-box models 
+●​ Incomplete calibration 
+●​ Manual intervention during demos 
+●​ Systems that “work once” but fail unpredictably 
+Below is an add-on section you can append to the Student FAQ. It is written to be practical, 
+non-prescriptive, and aligned with what students will realistically encounter in the IRAS-HUB 
+lab (UFactory arm + Addverb cobot). 
+You can title this “Getting Started: Suggested Tools & Models”. 
+11. Getting Started: Suggested Tools, Models, and 
+Hints 
+This section provides non-mandatory suggestions to help you get started quickly. You are free to 
+use alternatives, but you must understand and justify your choices. 
+A. Hardware Context 
+You will be working with two manipulation platforms in the lab: 
+●​ A UFatory robotic arm (fixed-base, parallel gripper) 
+●​ An Addverb collaborative robot (cobot) 
+Both platforms: 
+●​ Support ROS-based control 
+●​ Are suitable for top-down pick-and-place 
+●​ Will be used with a fixed RGB or RGB-D camera 
+Your system must be hardware-agnostic at the logic level. 
+B. Detecting Multiple Objects on a Tabletop 
+Recommended (Baseline-friendly) 
+●​ OpenCV-based segmentation: 
+○​ Background subtraction 
+○​ HSV color thresholding 
+○​ Contour detection 
+●​ Morphological operations (erosion, dilation) 
+Acceptable Advanced Options 
+●​ YOLO-style object detection (pretrained or fine-tuned) 
+●​ Segment Anything (SAM) for segmentation only 
+Note:​
+If using deep models, you must explain: 
+●​ Why the model is needed 
+●​ Failure cases 
+●​ How outputs are converted to robot-frame coordinates 
+C. Classifying Objects by Visual Attributes 
+You are required to classify objects using two primary attributes (e.g., color + marker 
+presence). 
+Attribute 1: Color 
+●​ HSV color space thresholding (recommended) 
+●​ Simple color histograms 
+●​ K-means clustering in color space 
+Attribute 2: Marker / Visual Cue 
+●​ ArUco or AprilTag detection 
+●​ Binary visual marker detection 
+●​ Shape-based cues (circle vs rectangle) as secondary option 
+Learning-based (Optional) 
+●​ Lightweight CNN for attribute classification 
+●​ Classical ML (SVM, Random Forest) on handcrafted features 
+Reminder: A classical baseline must work first. 
+D. Camera Calibration and Coordinate Mapping 
+Strongly recommended: 
+●​ OpenCV camera calibration tools 
+●​ Checkerboard-based intrinsic calibration 
+●​ Hand–eye (camera-to-robot) calibration 
+Hints: 
+●​ Validate calibration visually (overlay points) 
+●​ Small errors here cause large grasp failures 
+Calibration quality is graded implicitly through manipulation success. 
+E. Picking Objects with a Robotic Manipulator 
+Recommended Approach 
+●​ Top-down grasps only 
+●​ Grasp at object centroid or stable contour region 
+●​ Fixed gripper orientation 
+●​ Pre-grasp waypoint above the object 
+Tools 
+●​ ROS MoveIt for motion planning 
+●​ Cartesian motion where possible 
+●​ Simple collision avoidance (table + bins) 
+Avoid: Overly complex grasp planners or force control. 
+F. Placing Objects into Correct Bins 
+●​ Predefine bin locations in robot frame 
+●​ Use fixed place poses 
+●​ One bin per class 
+Hints: 
+●​ Keep bins well separated 
+●​ Avoid tight placement tolerances 
+G. Autonomy and Task Logic 
+Your system should include: 
+●​ A task state machine (e.g., detect → classify → pick → place) 
+●​ Retry logic (at least one retry per object) 
+●​ Failure detection (e.g., object not lifted) 
+Suggested tools: 
+●​ ROS nodes + simple state machines 
+●​ Python-based orchestration scripts 
+H. Vision–Language–Action Models 
+If used, they may assist with: 
+●​ Attribute reasoning from cropped images 
+●​ Resolving ambiguous classifications 
+●​ Comparing rule-based vs learned logic 
+They may not: 
+●​ Replace calibration 
+●​ Output direct robot actions 
+●​ Bypass geometric reasoning 
+VLAs are evaluated as analysis extensions, not core functionality. Here are concise, 
+student-ready model name suggestions (1–2 lines each), restricted to appropriate, open-source 
+or research-accessible VLAs/VLMs that make sense for a 10-week RPM project: 
+●​ OpenVLA – Open-source Vision–Language–Action framework suitable for high-level 
+semantic reasoning (e.g., attribute or task decision), not direct robot control. 
+●​ CLIP (OpenAI, open-weights variants) – Vision–language embedding model useful for 
+attribute classification and similarity-based reasoning from cropped object images. 
+●​ LLaVA – Open-source vision–language model suitable for image-based semantic 
+reasoning and comparison against rule-based logic. 
+●​ BLIP / BLIP-2 – Open-source vision–language models useful for image captioning and 
+attribute inference in perception pipelines. 
+●​ π-style policies (e.g., π0) – Research VLA policies; recommended only for offline analysis 
+or simulation, not direct hardware execution. 
+Final Hint 
+Start with one object, one attribute, one bin.​
+Scale up only after the full loop works reliably. 
+Final Advice 
+Build something simple that works reliably.​
+Then make it smarter. Not the other way around. 
