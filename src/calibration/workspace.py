@@ -3,7 +3,6 @@ import numpy as np
 import yaml
 import os
 
-
 class Workspace:
     
     def __init__(self, calib_file, corner_order):
@@ -22,7 +21,7 @@ class Workspace:
             with open(self._calib_file,'r') as f:
                 data= yaml.safe_load(f)
             if data and 'workspace_pixels'  in data:
-                self._saved_workspace={int(k): tuple(v) for k, v in data['bin_pixels'].items()}
+                self._saved_workspace={int(k): tuple(v) for k, v in data['workspace_pixels'].items()}
                 print(f"[Workspace] Loaded calibration from {self._calib_file}")
 
             if data and "bin_pixels" in data:
@@ -35,6 +34,10 @@ class Workspace:
         data={}
         ws= self._live_workspace or self._saved_workspace
         bins= self._live_bins or self._saved_bins
+        if ws:
+            data['workspace_pixels']={k: list(v) for k, v in ws.items()}
+        if bins:
+            data['bin_pixels']={k: list(v) for k, v in bins.items()}
         try:
             with open(self._calib_file, 'w') as f:
                 yaml.dump(data, f)
@@ -62,12 +65,12 @@ class Workspace:
     
     def get_bins(self):
         merged= self._saved_bins.copy()
-        for bid,pos in self._live_bins.copy():
+        for bid,pos in self._live_bins.items():
             merged[bid]=pos
         return merged
 
     def get_polygon(self):
-        ws= self.get_workspace_pixels
+        ws= self.get_workspace_pixels()
         if not ws or len(ws)!=4:
             return None
         points = [ws[tid] for tid in self._corner_order]
@@ -95,5 +98,5 @@ class Workspace:
             distance=max(np.hypot(dx, dy),1.0)
             scale_factor=(distance + margin)/distance
             expanded.append((cx+dx*scale_factor,cy + dy*scale_factor))
-            expanded_polygon = np.array(expanded, dtype=np.float32)
+        expanded_polygon = np.array(expanded, dtype=np.float32)
         return cv.pointPolygonTest(expanded_polygon, (float(px), float(py)), False) >= 0
