@@ -16,10 +16,10 @@ def marker_object_points(marker_size: float) -> np.ndarray:
     """
     half = marker_size / 2.0
     return np.array([
-        [-half,  half, 0.0],
-        [ half,  half, 0.0],
-        [ half, -half, 0.0],
-        [-half, -half, 0.0],
+        [-half,  half, 0.0],  # Top-Left corner
+        [ half,  half, 0.0],  # Top-Right corner
+        [ half, -half, 0.0],  # Bottom-Right corner
+        [-half, -half, 0.0],  # Bottom-Left corner
     ], dtype=np.float32)
 
 
