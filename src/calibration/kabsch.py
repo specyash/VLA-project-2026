@@ -10,64 +10,38 @@ import numpy as np
 
 def estimate_kabsch_transform(camera_points_mm: np.ndarray, robot_points_mm: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
-    The Kabsch algorithm calculates the perfect 3D rotation and movement needed to 
-    make the camera's coordinate system match the robot's coordinate system.
-    
-    Imagine you have a constellation of stars (ArUco markers). The camera sees them 
-    from one angle, and the robot arm feels them from a different angle. This function 
-    finds the exact mathematical formula to align them perfectly.
+    Computes the optimal Rigid Transformation (Rotation + Translation) to align
+    camera_points_mm with robot_points_mm using the Kabsch algorithm.
     """
-    # We need exactly matching lists. For example, point #1 for the camera MUST be point #1 for the robot.
     if camera_points_mm.shape != robot_points_mm.shape:
         raise ValueError("Camera and robot point arrays must have the same shape")
-        
-    # It takes at least 3 points in 3D space to lock in an alignment (like a tripod)
     if camera_points_mm.shape[0] < 3:
         raise ValueError("Kabsch needs at least 3 point correspondences")
 
-    # Step 1: Find the exact center (average) of all the camera points and robot points
     camera_center = camera_points_mm.mean(axis=0)
     robot_center = robot_points_mm.mean(axis=0)
-    
-    # Step 2: Move both sets of points so their centers are exactly at 0,0,0
-    # This allows us to figure out the rotation without worrying about distance yet
     X = camera_points_mm - camera_center
     Y = robot_points_mm - robot_center
 
-    # Step 3: Calculate the "covariance matrix" (how the points relate to each other)
     H = X.T @ Y
-    
-    # Step 4: Use Singular Value Decomposition (SVD), a complex math tool that separates 
-    # the rotation from the raw data.
     U, _, Vt = np.linalg.svd(H)
-    
-    # Step 5: Calculate the final 3D Rotation Matrix (R)
     R = Vt.T @ U.T
 
-    # Sometimes math produces a "mirror image" (reflection) instead of a pure rotation.
-    # We check the "determinant". If it's negative, it's a mirror image, so we flip it back.
+    # Handle reflection case
     if np.linalg.det(R) < 0:
         Vt[-1, :] *= -1
         R = Vt.T @ U.T
 
-    # Step 6: Now that we have the rotation, we calculate the exact distance (Translation)
-    # needed to move the camera's center to the robot's center.
     t = robot_center - R @ camera_center
-    
-    # Return Rotation (R) and Translation/Movement (t)
     return R, t
 
 
 def camera_to_robot(camera_point_m: np.ndarray, R: np.ndarray, t: np.ndarray) -> np.ndarray:
     """
-    Now that we have our mathematical bridge (Rotation R and Translation t),
-    this function takes a 3D coordinate from the camera (in meters) and tells us 
-    exactly where the robot arm needs to go (in millimeters).
+    Converts a single 3D camera coordinate (in meters) into a 3D robot coordinate (in mm)
+    using the Kabsch rotation (R) and translation (t).
     """
-    # Convert camera meters to millimeters so it matches the robot's language
     camera_point_mm = np.asarray(camera_point_m, dtype=np.float64).reshape(3) * 1000.0
-    
-    # Apply the Rotation (R @ point) and then the Translation (+ t)
     return R @ camera_point_mm + t
 
 def print_calibration_error(camera_points_mm: np.ndarray, robot_points_mm: np.ndarray, R: np.ndarray, t: np.ndarray) -> tuple[float, float]:

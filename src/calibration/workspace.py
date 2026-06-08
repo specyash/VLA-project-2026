@@ -140,11 +140,7 @@ class ArucoWorkspaceTracker:
                 return False
 
     def update(self, gray_frame):
-        """
-        Looks at the current camera picture and finds all ArUco markers.
-        It updates our memory of where the workspace corners and bins are.
-        """
-        # Ask OpenCV to find the markers in the black and white image
+        """Find markers in the grayscale frame and update stability tracking."""
         corners, ids, _ = self._detector.detectMarkers(gray_frame)
         found_ws = {}
         found_bins = {}
@@ -167,7 +163,6 @@ class ArucoWorkspaceTracker:
                     found_bins[mid_int] = [cx, cy]
 
         with self._lock:
-            # Update our tracker's memory of what is currently visible
             for tid in TAG_ROLE:
                 self._visible[tid] = tid in found_ws
             for tid, pos in found_ws.items():
@@ -175,60 +170,37 @@ class ArucoWorkspaceTracker:
             
             self._bin_positions = found_bins
 
-            # Check stability (Are all 4 workspace tags visible right now?)
+            # Check stability (all 4 workspace tags visible)
             if len(found_ws) == 4:
-                # Add this frame to our history buffer
                 self._stable_buf.append(dict(found_ws))
-                
-                # If our history is too long, remove the oldest frame
                 if len(self._stable_buf) > STABLE_NEEDED:
                     self._stable_buf.pop(0)
-                    
-                # If we've seen all 4 tags consistently for 20 frames (STABLE_NEEDED), lock it in!
                 if len(self._stable_buf) >= STABLE_NEEDED and not self._locked:
                     self._locked = True
-                    self._compute_homography() # Calculate the math to bridge camera and robot
+                    self._compute_homography()
             else:
-                # If a tag gets covered up during calibration, reset the stability counter
                 self._stable_buf.clear()
 
     def _compute_homography(self):
-        """
-        Calculates the Homography Matrix. 
-        Think of this as a magic translator: it learns how to convert a 2D pixel 
-        on your screen into a physical coordinate on the robot's table.
-        """
-        # We can't calculate this unless we see all 4 corners perfectly
+        """Compute the perspective transform from camera pixels to robot coordinates."""
         if not self._locked or not all(tid in self._positions for tid in CORNER_ORDER):
             self.homography = None
             return
             
-        # Get the pixel coordinates of the 4 corners
         pts_src = [[self._positions[k][0], self._positions[k][1]] for k in CORNER_ORDER]
-        
-        # Get the physical robot coordinates of where those 4 corners are glued to the table
         pts_dst = [[ROBOT_READINGS[TAG_TO_INDEX[k]][0], ROBOT_READINGS[TAG_TO_INDEX[k]][1]] for k in CORNER_ORDER]
         
-        # OpenCV calculates the 3x3 Homography Matrix for us
+        # Calculate the 3x3 Homography Matrix
         self.homography, _ = cv2.findHomography(np.array(pts_src, dtype=np.float32), 
                                                 np.array(pts_dst, dtype=np.float32))
 
     def pixel_to_robot(self, px, py):
-        """
-        Uses the Homography "translator" to convert a raw pixel (px, py)
-        into a physical robot coordinate.
-        """
+        """Convert a pixel coordinate (x,y) to a real-world robot coordinate."""
         with self._lock:
             if self.homography is None: 
                 return None
-            
-            # Format the pixel as a 3D matrix for OpenCV
             pt = np.array([[[px, py]]], dtype=np.float32)
-            
-            # Perform the translation magic
             robot_pt = cv2.perspectiveTransform(pt, self.homography)[0][0]
-            
-            # Return the X and Y coordinates for the robot
             return robot_pt[0], robot_pt[1]
 
     def reset(self):
