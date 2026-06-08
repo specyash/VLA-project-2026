@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-@dataclass
+@dataclass #data class automatically generates a constructor, equality methods, and a string representation
 class DetectedObject:
 
     """image pixels here, later can be converted to table coordinates"""

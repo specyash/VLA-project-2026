@@ -1,9 +1,13 @@
-"""contains the YOLO detection model"""
 
 from __future__ import annotations
+
+"""contains the YOLO detection model"""
+''' You give this file a frame by calling the detect function, it uses the modl specified in congfig file and detects the color of objects detectd in evey frame
+    and returnds a list of dataclass detected object which can be printed in teh callee file'''
+
 import numpy as np
 from src.perception.schema import DetectedObject
-from src.config import YOLO_DEMO_LABEL, YOLO_CLASS_LABELS, YOLO_CONFIDENCE_THRESHOLD, YOLO_MODEL_PATH, YOLO_IMAGE_SIZE
+from src.config import YOLO_DEMO_LABEL, YOLO_CLASS_LABELS, YOLO_CONFIDENCE_THRESHOLD, YOLO_MODEL_PATH, YOLO_IMAGE_SIZE, YOLO_BASE_CLASS_LABELS
 
 class YOLODetector:
     """YOLO detection model
@@ -45,9 +49,12 @@ class YOLODetector:
 
             for index, box in enumerate(result.boxes):
                 class_id = int(box.cls[0])
-                label = class_names[class_id]
+                base_color = self._parse_base_color(class_names[class_id])
                 confidence = float(box.conf[0])
                 xyxy = tuple(float(value) for value in box.xyxy[0])
+
+                marked = False #will be changed when hsv is configured
+                label = self._compose_label(base_color, marked)
                 detection = self._make_detection(detection_id=f"obj_{index}", label=label, confidence=confidence, xyxy_box=xyxy)
 
                 if detection is not None:
@@ -57,7 +64,9 @@ class YOLODetector:
 
     def _parse_labels(self, label:str) -> tuple[str,bool]:
 
-        """parse the label string into a tuple of (label, marked)"""
+        """parse the label string into a tuple of (label, marked)
+            to be uysed if the model can predict colour and marking
+            below functions are o be used for now implmenting base color detection + hsv detection"""
         
         if label not in YOLO_CLASS_LABELS:
             raise ValueError(f"Invalid YOLO label: {label}")
@@ -79,6 +88,26 @@ class YOLODetector:
             marked = True
 
         return base_color, marked
+
+    def _parse_base_color(self, base_color: str) -> str:
+        """Validate one YOLO base color such as blue, green, or red."""
+
+        if base_color not in YOLO_BASE_CLASS_LABELS:
+            raise ValueError(f"Unknown YOLO base color: {base_color}")
+
+        return base_color
+
+    def _compose_label(self, base_color: str, marked: bool) -> str:
+        """Build the final project label from color and marker state."""
+
+        marker_type = "marked" if marked else "plain"
+        label = f"{base_color}_{marker_type}"
+
+        if label not in YOLO_CLASS_LABELS:
+            raise ValueError(f"Unsupported project label: {label}")
+
+        return label
+
 
     def _make_detection(self, detection_id:str, label:str, confidence:float, xyxy_box:tuple[float,float,float,float]) -> DetectedObject | None:
 

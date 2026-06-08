@@ -6,8 +6,38 @@ import pytest
 from src.perception.yolo_detector import YOLODetector
 
 
-def test_parse_plain_label() -> None:
+def test_parse_base_colors_accepts_known_color() -> None:
     """A plain label should return its color and marked=False."""
+
+    detector = YOLODetector()
+    assert detector._parse_base_color("blue") == "blue"
+    assert detector._parse_base_color("green") == "green"
+    assert detector._parse_base_color("red") == "red"
+
+def test_parse_base_color_rejects_unknown_color() -> None:
+    """Unknown YOLO colors should fail clearly."""
+
+    detector = YOLODetector()
+
+    with pytest.raises(ValueError, match="Unknown YOLO base color"):
+        detector._parse_base_color("purple")
+
+def test_compose_plain_label() -> None:
+    """Base color plus marked=False should become color_plain."""
+
+    detector = YOLODetector()
+
+    assert detector._compose_label("blue", marked=False) == "blue_plain"
+
+def test_compose_marked_label() -> None:
+    """Base color plus marked=True should become color_marked."""
+
+    detector = YOLODetector()
+
+    assert detector._compose_label("red", marked=True) == "red_marked"
+
+def test_parse_plain_label() -> None:
+    """A full plain label should split correctly."""
 
     detector = YOLODetector()
 
@@ -15,7 +45,6 @@ def test_parse_plain_label() -> None:
 
     assert base_color == "blue"
     assert marked is False
-
 
 def test_parse_marked_label() -> None:
     """A marked label should return its color and marked=True."""
@@ -101,9 +130,10 @@ def test_detect_demo_returns_one_detection() -> None:
     assert len(detections) == 1
     assert detections[0].label == "blue_plain"
 
-def test_detect_requires_model_path_for_real_yolo() -> None:
+def test_detect_requires_model_path_for_real_yolo(monkeypatch) -> None:
     """Real detection should fail clearly until a model path is configured."""
 
+    monkeypatch.setattr("src.perception.yolo_detector.YOLO_MODEL_PATH", None)
     detector = YOLODetector()
     frame = np.zeros((480, 640, 3), dtype=np.uint8)
 
