@@ -7,7 +7,7 @@ and tracks their stability to auto-lock the workspace.
 This is a clean extraction of the ArUco/Workspace tracking logic from the OLD pipeline.
 """
 
-import cv2
+import cv2 as cv
 import cv2.aruco as aruco
 import numpy as np
 import threading
@@ -59,7 +59,7 @@ CORNER_LINE_COLOR = {
     19: (255,   0, 255),   # BL — magenta
 }
 CORNER_LABEL = {16: "TL", 17: "TR", 18: "BR", 19: "BL"}
-FONT = cv2.FONT_HERSHEY_SIMPLEX
+FONT = cv.FONT_HERSHEY_SIMPLEX
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  ARUCO DETECTOR
@@ -191,7 +191,7 @@ class ArucoWorkspaceTracker:
         pts_dst = [[ROBOT_READINGS[TAG_TO_INDEX[k]][0], ROBOT_READINGS[TAG_TO_INDEX[k]][1]] for k in CORNER_ORDER]
         
         # Calculate the 3x3 Homography Matrix
-        self.homography, _ = cv2.findHomography(np.array(pts_src, dtype=np.float32), 
+        self.homography, _ = cv.findHomography(np.array(pts_src, dtype=np.float32), 
                                                 np.array(pts_dst, dtype=np.float32))
 
     def pixel_to_robot(self, px, py):
@@ -200,7 +200,7 @@ class ArucoWorkspaceTracker:
             if self.homography is None: 
                 return None
             pt = np.array([[[px, py]]], dtype=np.float32)
-            robot_pt = cv2.perspectiveTransform(pt, self.homography)[0][0]
+            robot_pt = cv.perspectiveTransform(pt, self.homography)[0][0]
             return robot_pt[0], robot_pt[1]
 
     def reset(self):
@@ -248,7 +248,7 @@ class ArucoWorkspaceTracker:
             return False
             
         # Calculate polygon center to expand it by 'margin' pixels
-        M = cv2.moments(poly)
+        M = cv.moments(poly)
         if M['m00'] == 0: 
             return False
             
@@ -262,7 +262,7 @@ class ArucoWorkspaceTracker:
             expanded_pts.append((cx + dx * scale, cy + dy * scale))
             
         poly_exp = np.array(expanded_pts, dtype=np.float32)
-        return cv2.pointPolygonTest(poly_exp, (float(px), float(py)), False) >= 0
+        return cv.pointPolygonTest(poly_exp, (float(px), float(py)), False) >= 0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -280,7 +280,7 @@ def draw_dashed_line(frame, p1, p2, color, thickness=1, dash=12):
             sy = int(y1 + (y2 - y1) * i / n)
             ex = int(x1 + (x2 - x1) * (i + 1) / n)
             ey = int(y1 + (y2 - y1) * (i + 1) / n)
-            cv2.line(frame, (sx, sy), (ex, ey), color, thickness, cv2.LINE_AA)
+            cv.line(frame, (sx, sy), (ex, ey), color, thickness, cv.LINE_AA)
     return dist
 
 
@@ -289,9 +289,9 @@ def draw_workspace(frame, tracker):
     poly = tracker.get_polygon()
     if poly is not None:
         ov = frame.copy()
-        cv2.fillPoly(ov, [poly], (0, 255, 255))
-        cv2.addWeighted(ov, 0.08, frame, 0.92, 0, frame)
-        cv2.polylines(frame, [poly], True, (0, 255, 255), 2, cv2.LINE_AA)
+        cv.fillPoly(ov, [poly], (0, 255, 255))
+        cv.addWeighted(ov, 0.08, frame, 0.92, 0, frame)
+        cv.polylines(frame, [poly], True, (0, 255, 255), 2, cv.LINE_AA)
 
     positions = tracker.get_positions()
     visible = tracker.get_visibility()
@@ -301,17 +301,17 @@ def draw_workspace(frame, tracker):
             continue
         px, py = positions[tid]
         col = (0, 255, 0) if visible.get(tid) else (0, 170, 255)
-        cv2.circle(frame, (px, py), 9, col, -1)
-        cv2.putText(frame, f"ID{tid} {CORNER_LABEL[tid]}",
-                    (px + 12, py - 8), FONT, 0.50, col, 2, cv2.LINE_AA)
+        cv.circle(frame, (px, py), 9, col, -1)
+        cv.putText(frame, f"ID{tid} {CORNER_LABEL[tid]}",
+                    (px + 12, py - 8), FONT, 0.50, col, 2, cv.LINE_AA)
 
     # Draw the dynamic bins
     bin_positions = tracker.get_bin_positions()
     for bid, pos in bin_positions.items():
         bx, by = pos
-        cv2.circle(frame, (bx, by), 8, (255, 0, 0), -1)
-        cv2.putText(frame, f"Bin {BIN_NAMES.get(bid, bid)}", 
-                    (bx + 15, by + 15), FONT, 0.6, (255, 0, 0), 2, cv2.LINE_AA)
+        cv.circle(frame, (bx, by), 8, (255, 0, 0), -1)
+        cv.putText(frame, f"Bin {BIN_NAMES.get(bid, bid)}", 
+                    (bx + 15, by + 15), FONT, 0.6, (255, 0, 0), 2, cv.LINE_AA)
 
 
 def draw_hud(frame, tracker, cam_fps):
@@ -325,26 +325,26 @@ def draw_hud(frame, tracker, cam_fps):
     if not locked:
         pct = stab / STABLE_NEEDED
         bar_w = int((w - 40) * pct)
-        cv2.rectangle(frame, (20, h - 38), (w - 20, h - 12), (40, 40, 40), -1)
-        cv2.rectangle(frame, (20, h - 38), (20 + bar_w, h - 12), (0, 200, 80), -1)
+        cv.rectangle(frame, (20, h - 38), (w - 20, h - 12), (40, 40, 40), -1)
+        cv.rectangle(frame, (20, h - 38), (20 + bar_w, h - 12), (0, 200, 80), -1)
         missing = [f"ID{t}" for t in CORNER_ORDER if not vis.get(t)]
         msg = (f"Calibrating {stab}/{STABLE_NEEDED} frames..."
                if n_vis == 4 else f"Waiting for: {', '.join(missing)}")
-        cv2.putText(frame, msg, (30, h - 17), FONT, 0.55,
-                    (255, 255, 255), 2, cv2.LINE_AA)
+        cv.putText(frame, msg, (30, h - 17), FONT, 0.55,
+                    (255, 255, 255), 2, cv.LINE_AA)
     else:
         mode = "LOCKED" if n_vis == 4 else "PARTIAL (LOCKED)"
         bar = (f"Workspace: {mode}   Tags:{n_vis}/4"
                f"   cam:{cam_fps:.0f}fps"
                f"   Q=quit  R=reset")
-        cv2.rectangle(frame, (0, h - 38), (w, h), (0, 60, 0), -1)
-        cv2.putText(frame, bar, (12, h - 12), FONT, 0.52,
-                    (255, 255, 255), 2, cv2.LINE_AA)
+        cv.rectangle(frame, (0, h - 38), (w, h), (0, 60, 0), -1)
+        cv.putText(frame, bar, (12, h - 12), FONT, 0.52,
+                    (255, 255, 255), 2, cv.LINE_AA)
 
     # Top-right corner tag indicators
     for i, tid in enumerate(CORNER_ORDER):
         col = (0, 255, 0) if vis.get(tid) else (0, 0, 200)
-        cv2.circle(frame, (w - 25 - i * 22, 22), 8, col,
+        cv.circle(frame, (w - 25 - i * 22, 22), 8, col,
                    -1 if vis.get(tid) else 2)
 
 
@@ -354,15 +354,15 @@ def draw_hud(frame, tracker, cam_fps):
 if __name__ == "__main__":
     # A standalone testing block for the ArUco portion of the pipeline.
     print("Starting ArUco Workspace Tracker test...")
-    cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    cap = cv.VideoCapture(0)
+    cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, 720)
 
     tracker = ArucoWorkspaceTracker()
 
     WIN = "ArUco Workspace Tracker  |  Q=quit  R=reset"
-    cv2.namedWindow(WIN, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(WIN, 1280, 720)
+    cv.namedWindow(WIN, cv.WINDOW_NORMAL)
+    cv.resizeWindow(WIN, 1280, 720)
 
     print(f"Tracking IDs {CORNER_ORDER}.")
     print("Keys: Q=quit  R=reset calibration\n")
@@ -384,7 +384,7 @@ if __name__ == "__main__":
             fcnt, t_cam = 0, now
 
         # ArUco requires grayscale image
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         
         # Update tracker
         tracker.update(gray)
@@ -393,8 +393,8 @@ if __name__ == "__main__":
         draw_workspace(frame, tracker)
         draw_hud(frame, tracker, cam_fps)
 
-        cv2.imshow(WIN, frame)
-        key = cv2.waitKey(1) & 0xFF
+        cv.imshow(WIN, frame)
+        key = cv.waitKey(1) & 0xFF
         if key == ord('q'):
             break
         if key == ord('s'):
@@ -406,5 +406,5 @@ if __name__ == "__main__":
             print("Calibration reset -- re-scanning.")
 
     cap.release()
-    cv2.destroyAllWindows()
+    cv.destroyAllWindows()
     print("Test finished.")

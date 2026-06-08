@@ -5,7 +5,7 @@ Handles the 3D pose estimation (Position & Rotation) of ArUco markers
 in real-world space using camera calibration parameters.
 """
 
-import cv2
+import cv2 as cv
 import numpy as np
 
 
@@ -26,10 +26,10 @@ def marker_object_points(marker_size: float) -> np.ndarray:
 def estimate_marker_pose(corners, marker_size: float, K: np.ndarray, dist: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Estimates the 3D translation (tvecs) and rotation (rvecs) of ArUco markers.
-    Works for both older OpenCV (cv2.aruco.estimatePoseSingleMarkers) and newer OpenCV (cv2.solvePnP).
+    Works for both older OpenCV (cv.aruco.estimatePoseSingleMarkers) and newer OpenCV (cv.solvePnP).
     """
-    if hasattr(cv2.aruco, "estimatePoseSingleMarkers"):
-        rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, marker_size, K, dist)
+    if hasattr(cv.aruco, "estimatePoseSingleMarkers"):
+        rvecs, tvecs, _ = cv.aruco.estimatePoseSingleMarkers(corners, marker_size, K, dist)
         if rvecs is None: return np.array([]), np.array([])
         return rvecs.reshape(-1, 3), tvecs.reshape(-1, 3)
 
@@ -39,7 +39,7 @@ def estimate_marker_pose(corners, marker_size: float, K: np.ndarray, dist: np.nd
     tvecs = []
     
     for marker_corners in corners:
-        ok, rvec, tvec = cv2.solvePnP(objp, marker_corners.reshape(4, 2), K, dist)
+        ok, rvec, tvec = cv.solvePnP(objp, marker_corners.reshape(4, 2), K, dist)
         if ok:
             rvecs.append(rvec.reshape(3))
             tvecs.append(tvec.reshape(3))
@@ -55,20 +55,20 @@ def detect_target_pose(frame: np.ndarray, detector, target_id: int, marker_size:
     Detects markers in the frame, draws them, and returns the 3D pose of a specific target_id.
     Returns: tvec, rvec, all_corners, all_ids
     """
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     
     # Handle older vs newer OpenCV API differences
-    if hasattr(cv2.aruco, "ArucoDetector"):
+    if hasattr(cv.aruco, "ArucoDetector"):
         corners, ids, _ = detector.detectMarkers(gray)
     else:
         dictionary, params = detector
-        corners, ids, _ = cv2.aruco.detectMarkers(gray, dictionary, parameters=params)
+        corners, ids, _ = cv.aruco.detectMarkers(gray, dictionary, parameters=params)
         
     if ids is None or len(ids) == 0:
         return None, None, corners, ids
 
     # Draw standard bounding boxes
-    cv2.aruco.drawDetectedMarkers(frame, corners, ids)
+    cv.aruco.drawDetectedMarkers(frame, corners, ids)
     
     # Calculate 3D Positional Math
     rvecs, tvecs = estimate_marker_pose(corners, marker_size, K, dist)
@@ -82,7 +82,7 @@ def detect_target_pose(frame: np.ndarray, detector, target_id: int, marker_size:
             return None, None, corners, ids
             
         # Draw 3D axis directly onto the live frame
-        cv2.drawFrameAxes(frame, K, dist, rvecs[i], tvecs[i], marker_size * 0.5)
+        cv.drawFrameAxes(frame, K, dist, rvecs[i], tvecs[i], marker_size * 0.5)
         
         return tvecs[i], rvecs[i], corners, ids
 
