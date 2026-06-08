@@ -28,6 +28,14 @@ TAG_ROLE = {
 CORNER_ORDER = [16, 17, 18, 19]   # polygon winding order (TL→TR→BR→BL)
 TAG_TO_INDEX = {16: 0, 17: 1, 18: 2, 19: 3}
 
+# ArUco IDs for Dynamic Bins
+BIN_NAMES = {
+    24: "Wet Bin",       # Green
+    20: "Dangerous Bin", # Red
+    25: "Dry Bin",       # Blue
+    27: "Recycle Bin"    # Yellow
+}
+
 # Workspace calibration save file
 CALIB_FILE = "workspace_calibration.yaml"
 
@@ -73,6 +81,7 @@ class ArucoWorkspaceTracker:
         self._detector = make_aruco_detector()
         self._lock = threading.Lock()
         self._positions = {}
+        self._bin_positions = {}
         self._visible = {tid: False for tid in TAG_ROLE}
         self._stable_buf = []
         self._locked = False
@@ -81,24 +90,31 @@ class ArucoWorkspaceTracker:
     def update(self, gray_frame):
         """Find markers in the grayscale frame and update stability tracking."""
         corners, ids, _ = self._detector.detectMarkers(gray_frame)
-        found = {}
+        found_ws = {}
+        found_bins = {}
         if ids is not None:
             for i, mid in enumerate(ids.flatten()):
-                if int(mid) in TAG_ROLE:
-                    c = corners[i][0]
-                    cx = int(c[:, 0].mean())
-                    cy = int(c[:, 1].mean())
-                    found[int(mid)] = [cx, cy]
+                mid_int = int(mid)
+                c = corners[i][0]
+                cx = int(c[:, 0].mean())
+                cy = int(c[:, 1].mean())
+                
+                if mid_int in TAG_ROLE:
+                    found_ws[mid_int] = [cx, cy]
+                elif mid_int in BIN_NAMES:
+                    found_bins[mid_int] = [cx, cy]
 
         with self._lock:
             for tid in TAG_ROLE:
-                self._visible[tid] = tid in found
-            for tid, pos in found.items():
+                self._visible[tid] = tid in found_ws
+            for tid, pos in found_ws.items():
                 self._positions[tid] = pos
+            
+            self._bin_positions = found_bins
 
-            # Check stability (all 4 tags visible)
-            if len(found) == 4:
-                self._stable_buf.append(dict(found))
+            # Check stability (all 4 workspace tags visible)
+            if len(found_ws) == 4:
+                self._stable_buf.append(dict(found_ws))
                 if len(self._stable_buf) > STABLE_NEEDED:
                     self._stable_buf.pop(0)
                 if len(self._stable_buf) >= STABLE_NEEDED and not self._locked:
@@ -149,6 +165,11 @@ class ArucoWorkspaceTracker:
         """Get the center points of the detected corners."""
         with self._lock:
             return dict(self._positions)
+
+    def get_bin_positions(self):
+        """Get the current center points of the detected dynamic bins."""
+        with self._lock:
+            return dict(self._bin_positions)
 
     def get_visibility(self):
         """Get visibility status for each corner."""
@@ -209,6 +230,14 @@ def draw_workspace(frame, tracker):
         cv2.circle(frame, (px, py), 9, col, -1)
         cv2.putText(frame, f"ID{tid} {CORNER_LABEL[tid]}",
                     (px + 12, py - 8), FONT, 0.50, col, 2, cv2.LINE_AA)
+
+    # Draw the dynamic bins
+    bin_positions = tracker.get_bin_positions()
+    for bid, pos in bin_positions.items():
+        bx, by = pos
+        cv2.circle(frame, (bx, by), 8, (255, 0, 0), -1)
+        cv2.putText(frame, f"Bin {BIN_NAMES.get(bid, bid)}", 
+                    (bx + 15, by + 15), FONT, 0.6, (255, 0, 0), 2, cv2.LINE_AA)
 
 
 def draw_hud(frame, tracker, cam_fps):
