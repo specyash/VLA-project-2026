@@ -12,6 +12,8 @@ import cv2.aruco as aruco
 import numpy as np
 import threading
 import time
+import yaml
+import os
 
 # ── Configuration & Constants ──────────────────────────────────────────────────
 # The dictionary to use. The old code used AprilTag 36h11, but if you switched
@@ -80,12 +82,62 @@ class ArucoWorkspaceTracker:
     def __init__(self):
         self._detector = make_aruco_detector()
         self._lock = threading.Lock()
+        
         self._positions = {}
         self._bin_positions = {}
+        
+        self.fallback_workspace_pixels = {}
+        self.fallback_bin_pixels = {}
+        self.load_calibration()
+        
         self._visible = {tid: False for tid in TAG_ROLE}
         self._stable_buf = []
         self._locked = False
         self.homography = None
+        
+        # Try to compute homography immediately if loaded from fallback
+        if len(self.fallback_workspace_pixels) == 4:
+            self._positions = self.fallback_workspace_pixels.copy()
+            self._bin_positions = self.fallback_bin_pixels.copy()
+            self._locked = True
+            self._compute_homography()
+
+    def load_calibration(self):
+        """Load saved workspace and bin pixels from YAML file."""
+        if os.path.exists(CALIB_FILE):
+            try:
+                with open(CALIB_FILE, 'r') as f:
+                    data = yaml.safe_load(f)
+                    if data and 'workspace_pixels' in data:
+                        self.fallback_workspace_pixels = {int(k): list(v) for k, v in data['workspace_pixels'].items()}
+                    if data and 'bin_pixels' in data:
+                        self.fallback_bin_pixels = {int(k): list(v) for k, v in data['bin_pixels'].items()}
+            except Exception as e:
+                print(f"Error loading calibration: {e}")
+
+    def save_calibration(self):
+        """Save the currently tracked workspace and bin pixels to YAML."""
+        with self._lock:
+            if not self._locked:
+                print("Cannot save calibration: workspace not fully tracked.")
+                return False
+                
+            data_to_save = {}
+            if self._positions:
+                data_to_save['workspace_pixels'] = {k: list(v) for k, v in self._positions.items()}
+                self.fallback_workspace_pixels = self._positions.copy()
+            if self._bin_positions:
+                data_to_save['bin_pixels'] = {k: list(v) for k, v in self._bin_positions.items()}
+                self.fallback_bin_pixels = self._bin_positions.copy()
+                
+            try:
+                with open(CALIB_FILE, 'w') as f:
+                    yaml.dump(data_to_save, f)
+                print(f"Calibration saved to {CALIB_FILE}")
+                return True
+            except Exception as e:
+                print(f"Error saving calibration: {e}")
+                return False
 
     def update(self, gray_frame):
         """Find markers in the grayscale frame and update stability tracking."""
@@ -181,14 +233,30 @@ class ArucoWorkspaceTracker:
         with self._lock:
             if not all(tid in self._positions for tid in CORNER_ORDER):
                 return None
-            return np.array([self._positions[tid] for tid in CORNER_ORDER], dtype=np.int32)
+            return np.array([self._positions[tid] for tid in CORNER_ORDER], dtype=np.float32)
 
-    def inside_workspace(self, pt):
-        """Check if a given (x,y) point is strictly inside the 4-corner workspace."""
+    def inside_workspace(self, px, py, margin=75):
+        """Check if a given (x,y) point is inside the 4-corner workspace, with a margin."""
         poly = self.get_polygon()
         if poly is None:
             return False
-        return cv2.pointPolygonTest(poly, (float(pt[0]), float(pt[1])), False) >= 0
+            
+        # Calculate polygon center to expand it by 'margin' pixels
+        M = cv2.moments(poly)
+        if M['m00'] == 0: 
+            return False
+            
+        cx, cy = M['m10'] / M['m00'], M['m01'] / M['m00']
+        
+        expanded_pts = []
+        for pt in poly:
+            dx, dy = pt[0] - cx, pt[1] - cy
+            dist = max(np.hypot(dx, dy), 1)
+            scale = (dist + margin) / dist
+            expanded_pts.append((cx + dx * scale, cy + dy * scale))
+            
+        poly_exp = np.array(expanded_pts, dtype=np.float32)
+        return cv2.pointPolygonTest(poly_exp, (float(px), float(py)), False) >= 0
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -323,8 +391,12 @@ if __name__ == "__main__":
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):
             break
+        if key == ord('s'):
+            tracker.save_calibration()
         if key == ord('r'):
             tracker.reset()
+            if os.path.exists(CALIB_FILE): 
+                os.remove(CALIB_FILE)
             print("Calibration reset -- re-scanning.")
 
     cap.release()
