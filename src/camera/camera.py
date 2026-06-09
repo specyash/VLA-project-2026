@@ -33,7 +33,26 @@ class Camera:
                 print("[Camera] Intel RealSense initialized.")
                 return
             except Exception as e:
-                print(f"[Camera] RealSense init failed: {e}. Proceeding with webcame fallback.")
+                print(f"[Camera] RealSense init failed for {self.width}x{self.height}@{self.fps}: {e}")
+                # Try fallback resolution (640x480 @ 30fps) if not already requested
+                if self.width != 640 or self.height != 480 or self.fps != 30:
+                    print("[Camera] Retrying RealSense initialization with fallback 640x480 @ 30 FPS...")
+                    try:
+                        config = prs.config()
+                        config.enable_stream(prs.stream.color, 640, 480, prs.format.bgr8, 30)
+                        config.enable_stream(prs.stream.depth, 640, 480, prs.format.z16, 30)
+                        self._pipeline.start(config)
+                        self._align = prs.align(prs.stream.color)
+                        self.width = 640
+                        self.height = 480
+                        self.fps = 30
+                        self._using_prs = True
+                        print("[Camera] Intel RealSense initialized with fallback resolution.")
+                        return
+                    except Exception as e2:
+                        print(f"[Camera] RealSense fallback failed: {e2}. Proceeding with webcam fallback.")
+                else:
+                    print("[Camera] Proceeding with webcam fallback.")
                 self._pipeline=None
         # webcam fallback system
         self._capture =cv.VideoCapture(0)
