@@ -53,6 +53,31 @@ def make_aruco_detector():
     params.minMarkerPerimeterRate = 0.03
     return aruco.ArucoDetector(dictionary, params)
 
+def detect_tags(gray_frame, detector):
+    """
+    Find ArUco markers in the grayscale frame and extract their center pixels.
+    This feeds into the Workspace and homography CoordinateMapper.
+    """
+    corners, ids, _ = detector.detectMarkers(gray_frame)
+    found_ws = {}
+    found_bins = {}
+    
+    if ids is not None:
+        for i, mid in enumerate(ids.flatten()):
+            mid_int = int(mid)
+            c = corners[i][0]
+            
+            # Calculate the exact center pixel (X, Y) of the marker
+            cx = int(c[:, 0].mean())
+            cy = int(c[:, 1].mean())
+            
+            if mid_int in TAG_ROLE:
+                found_ws[mid_int] = [cx, cy]
+            elif mid_int in BIN_NAMES:
+                found_bins[mid_int] = [cx, cy]
+                
+    return found_ws, found_bins
+
 try:
     import pyrealsense2 as prs
     prs_ready = True
