@@ -18,10 +18,10 @@ CORNER_ORDER = [16, 17, 18, 19]
 TAG_TO_INDEX = {16: 0, 17: 1, 18: 2, 19: 3}
 
 BIN_NAMES = {
-    24: "Wet Bin",       # Green
-    20: "Dangerous Bin", # Red
-    25: "Dry Bin",       # Blue
-    27: "Recycle Bin"    # Yellow
+    24: "Wet Bin",       
+    20: "Dangerous Bin", 
+    25: "Dry Bin",       
+    27: "Recycle Bin"
 }
 
 CALIB_FILE = "workspace_calibration.yaml"
@@ -87,7 +87,6 @@ class Camera:
             except Exception as e:
                 print(f"[Camera] RealSense init failed: {e}. Proceeding with webcame fallback.")
                 self._pipeline=None
-        # webcam fallback system
         self._capture =cv.VideoCapture(0)
         self._capture.set(cv.CAP_PROP_FRAME_WIDTH,self.width)
         self._capture.set(cv.CAP_PROP_FRAME_HEIGHT,self.height)
@@ -257,7 +256,6 @@ class Workspace:
 class BlockAnalyzer:
     blacklower =np.array([0,0,0])
     blackupper= np.array([180,255,60])
-    # a block will be marked as black if the percentage of black pixels is between 2% and 40%
     minratio=0.02
     maxratio=0.4
     
@@ -272,7 +270,6 @@ class BlockAnalyzer:
         ratio=cv.countNonZero(mask)/total
         return BlockAnalyzer.minratio<ratio<BlockAnalyzer.maxratio
 
-# hud integration begins...
 COLORS={
     "yellow":(0,255,255),
     "green":(0,255,0),
@@ -408,23 +405,19 @@ class DepthVisualizer:
         h =int(depth_img.shape[0]* self.scale)
         w = int(depth_img.shape[1]*self.scale)
 
-# scaling down the imgs...
 
         color_small= cv.resize(color_img,(w,h))
         depth_small =cv.resize(depth_img,(w,h))
-    # normalise the depth to 255
+
         clipped = np.clip(depth_small, self.min_depth, self.max_depth)
         normalized= cv.normalize(clipped, None,0,255,cv.NORM_MINMAX, dtype=cv.CV_8U)
 
         normalized = 255 - normalized
-        normalized[depth_small ==0] =0  # Invalid depth stays black
-
-        #convert to layers
+        normalized[depth_small ==0] =0  
         layered = (normalized//self._layer_step) *self._layer_step
 
-        #applying turbo colormap for the heatmap look
         colormap =cv.applyColorMap(layered,cv.COLORMAP_TURBO)
-        colormap[depth_small ==0] = [0,0,0]  # black out invalid pixels... 
+        colormap[depth_small ==0] = [0,0,0]  
 
         edges = cv.Canny(layered,50,150)
         colormap[edges>0] = [0,255,0]
@@ -443,11 +436,9 @@ class DepthVisualizer:
                 (sx1, sy1 - 5), FONT, 0.4, (255, 255, 255), 1
             )
 
-        # to setup title 
         cv.putText(
             colormap, "TOPOGRAPHIC DEPTH LAYERS",
             (10, 25), FONT, 0.6, COLORS["cyan"], 2
         )
 
-        # stacking side by side...
         return np.hstack((color_small, colormap))
