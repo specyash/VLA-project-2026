@@ -1,10 +1,3 @@
-"""
-Kabsch Calibration & Transformation
-===================================
-Handles the 3D calibration between the camera and the robot using the Kabsch algorithm.
-It computes the optimal rotation matrix and translation vector to align 3D camera points
-with 3D robot points.
-"""
 
 import numpy as np
 
