@@ -59,7 +59,6 @@ class VoiceWorker(threading.Thread):
         print(f"[AI]: {text}")
 
     def play_audio(self, filename):
-        """Cross-platform audio player utility using native OS binaries."""
         try:
             if platform.system() == "Darwin": #for macos systems
                 subprocess.run(["afplay", filename])
@@ -103,15 +102,3 @@ class VoiceWorker(threading.Thread):
             time.sleep(0.1) 
             self.queue.task_done()
 
-# Simple test runner
-if __name__ == "__main__":
-    print("Testing VoiceWorker module...")
-    voice = VoiceWorker()
-    if voice.active:
-        voice.start()
-        voice.speak("System initialized. Starting test of the neural text to speech engine.")
-        time.sleep(5)
-        voice.speak("Stopping speech thread.")
-        voice.queue.put(None)
-    else:
-        print("Test failed: voice engine could not be activated.")

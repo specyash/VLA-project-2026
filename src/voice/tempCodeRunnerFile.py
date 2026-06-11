@@ -1,0 +1,1 @@
+System initialized. Starting test of the neural text to speech engine.
