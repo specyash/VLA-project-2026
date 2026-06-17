@@ -6,10 +6,11 @@ import urllib.error
 import urllib.request
 
 from src.config import ROBOT_IP, GRIPPER_IP, MOVE_ACC, GRIPPER_HTTP_WAIT_SEC, GRIPPER_SDK_WAIT_SEC, HOME_POSE, RECOVER_WAIT_SEC, RECOVER_MOVE_SPEED
+from src.voice.voice_worker import VoiceWorker
 
 class XArmRobotAdapter:
 
-    def __init__(self, robot_ip:str | None = None, gripper_ip:str | None = None, dry_run:bool = False) -> None:
+    def __init__(self, robot_ip:str | None = None, gripper_ip:str | None = None, dry_run:bool = False, use_voice:bool = True) -> None:
         self.robot_ip = robot_ip or ROBOT_IP
         self.gripper_ip = gripper_ip or GRIPPER_IP
         self.dry_run = dry_run
@@ -17,19 +18,24 @@ class XArmRobotAdapter:
         self._command_log: list[str] = []
         self._emergency_stopped = False
 
+        self.voice = None
+        if use_voice:
+            self.voice = VoiceWorker()
+            self.voice.start()
+
         if self.dry_run:
             self._record("DRY RUN MODE")
             return
 
         self._connect()
 
-    def move_to_pose(self, x:float, y:float, z:float, r:float = -180.0, p:float = 0.0, yaw:float = -90.0, speed:float = 20.0) -> None:
+    def move_to_pose(self, x:float, y:float, z:float, r:float = -180.0, p:float = 0.0, yaw:float = -90.0, speed:float = 20.0, description: str | None = None) -> None:
         command = (f"MOVE x={x:.1f} y={y:.1f} z={z:.1f} r={r:.1f} p={p:.1f} yaw={yaw:.1f} speed={speed:.1f}")
 
         self._ensure_ready_for_motion()
 
         if self.dry_run or self.arm is None:
-            self._record(command)
+            self._record(command, description)
             return
 
         if self.arm.error_code != 0:
@@ -37,7 +43,7 @@ class XArmRobotAdapter:
 
         code = self.arm.set_position(x=x, y=y, z=z, r=r, p=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
 
-        self._record(command)
+        self._record(command, description)
 
         if code != 0 or self.arm.error_code != 0:
             raise RuntimeError(f"Robot arm failed with code: {code}, error code: {self.arm.error_code}")
@@ -45,13 +51,13 @@ class XArmRobotAdapter:
     def home(self) -> None:
         self._ensure_ready_for_motion()
         home_x, home_y, home_z, home_r, home_p, home_yaw = HOME_POSE
-        self.move_to_pose(x=home_x, y=home_y, z=home_z, r=home_r, p=home_p, yaw=home_yaw)
+        self.move_to_pose(x=home_x, y=home_y, z=home_z, r=home_r, p=home_p, yaw=home_yaw, description="Returning to home position.")
 
-    def open_gripper(self) -> None:
-        self._gripper_action(state=0, command_name="OPEN_GRIPPER")
+    def open_gripper(self, description: str | None = None) -> None:
+        self._gripper_action(state=0, command_name="OPEN_GRIPPER", description=description)
 
-    def close_gripper(self) -> None:
-        self._gripper_action(state=1, command_name="CLOSE_GRIPPER")
+    def close_gripper(self, description: str | None = None) -> None:
+        self._gripper_action(state=1, command_name="CLOSE_GRIPPER", description=description)
 
     def recover(self) -> None:
         self._record("RECOVER")
@@ -129,7 +135,7 @@ class XArmRobotAdapter:
         self.arm.set_state(0)
         self._record(f"CONNECTED: {self.robot_ip}")
 
-    def _gripper_action(self, state:int, command_name:str) -> None:
+    def _gripper_action(self, state:int, command_name:str, description: str | None = None) -> None:
         
         '''Implement gripper action with retries.
             state 0 for open
@@ -137,11 +143,11 @@ class XArmRobotAdapter:
             Tries http first then sdk for fallback commands'''
 
         if self.dry_run or self.arm is None:
-            self._record(command_name)
+            self._record(command_name, description)
             return
         
         if self._gripper_http(state):
-            self._record(command_name)
+            self._record(command_name, description)
             time.sleep(GRIPPER_HTTP_WAIT_SEC)
             return
 
@@ -149,6 +155,7 @@ class XArmRobotAdapter:
         if code != 0:
             raise RuntimeError(f"Gripper SDK command {command_name} failed with code: {code}")
 
+        self._record(command_name, description)
         time.sleep(GRIPPER_SDK_WAIT_SEC)
 
     def _gripper_http(self, state:int) -> bool:
@@ -175,7 +182,41 @@ class XArmRobotAdapter:
         except Exception as error:
             self._record(f"OPEN_GRIPPER_FAILED {error}")
 
-    def _record(self, message:str) -> None:
+    def _record(self, message:str, description: str | None = None) -> None:
         '''Record command to log.'''
         print(message)
         self._command_log.append(message)
+        if self.voice:
+            spoken_text = description if description else self._format_speech(message)
+            self.voice.speak(spoken_text)
+
+    def _format_speech(self, message:str) -> str:
+        if message.startswith("MOVE "):
+            parts = message.split()
+            coords = {}
+            for part in parts[1:]:
+                if "=" in part:
+                    key, val = part.split("=", 1)
+                    try:
+                        coords[key] = float(val)
+                    except ValueError:
+                        coords[key] = val
+            x = coords.get("x", 0.0)
+            y = coords.get("y", 0.0)
+            z = coords.get("z", 0.0)
+            return f"Moving to X {x:.0f}, Y {y:.0f}, Z {z:.0f}."
+        elif message == "HOME":
+            return "Moving to home position."
+        elif message == "OPEN_GRIPPER":
+            return "Opening gripper."
+        elif message == "CLOSE_GRIPPER":
+            return "Closing gripper."
+        elif message == "RECOVER":
+            return "Recovering robot."
+        elif message.startswith("CONNECTED:"):
+            return "Robot connected."
+        elif message == "DISCONNECTED":
+            return "Robot disconnected."
+        elif message.startswith("EMERGENCY_STOP"):
+            return "Emergency stop."
+        return message

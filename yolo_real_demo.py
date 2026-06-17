@@ -91,7 +91,7 @@ def run_on_webcam() -> None:
     finally:
         capture.release()
         cv2.destroyAllWindows()
-
+        
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run real YOLO detection demo.")

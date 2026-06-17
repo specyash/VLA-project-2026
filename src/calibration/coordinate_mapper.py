@@ -35,3 +35,25 @@ class CoordinateMapper:
     
     def is_valid(self):
         return self._homography is not None
+
+
+class KabschCoordinateMapper:
+    def __init__(self, R, t, fx, fy, cx, cy):
+        self.R = R
+        self.t = t
+        self.fx = fx
+        self.fy = fy
+        self.cx = cx
+        self.cy = cy
+
+    def cvt2robot_3d(self, px, py, depth_mm):
+        # 1. Project 2D pixel + depth to 3D Camera Frame (in mm)
+        xc = ((px - self.cx) * depth_mm) / self.fx
+        yc = ((py - self.cy) * depth_mm) / self.fy
+        zc = depth_mm
+        camera_point = np.array([xc, yc, zc], dtype=np.float64)
+
+        # 2. Transform to 3D Robot Base Frame (in mm)
+        robot_point = self.R @ camera_point + self.t
+        return float(robot_point[0]), float(robot_point[1]), float(robot_point[2])
+

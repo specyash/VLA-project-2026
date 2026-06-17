@@ -38,14 +38,30 @@ def _validate_xy(name:str, xy:tuple[float, float]) -> tuple[float, float]:
 
     return x, y
 
+def _validate_xyz(name:str, xyz:tuple[float, float, float]) -> tuple[float, float, float]:
+    if(len(xyz) != 3):
+        raise ValueError(f"{name} must be a tuple of three floats")
+
+    x, y, z = xyz
+
+    if not isfinite(x) or not isfinite(y) or not isfinite(z):
+        raise ValueError(f"{name} must contain finite numbers")
+
+    return x, y, z
+
 def create_pick_place_plan(
-    object_xy: tuple[float, float],
+    object_xyz: tuple[float, float, float],
     bin_xy: tuple[float, float],
+    drop_z: float
 ) -> list[PickPlaceStep]:
 
-    object_x, object_y = _validate_xy("object_xy", object_xy)
+#Create a sequence of steps to move object to bin in a safe way
+
+    object_x, object_y,object_z = _validate_xyz("object_xyz", object_xyz)
     bin_x, bin_y = _validate_xy("bin_xy", bin_xy)
     home_x, home_y, home_z, home_r, home_p, home_yaw = HOME_POSE
+    actual_drop_z = drop_z if drop_z is not None else DROP_Z
+    safe_hover_z = min(310.0, max(HOVER_Z, actual_drop_z + 5.0))
 
     return [
         PickPlaceStep(
@@ -57,64 +73,64 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
-            description="move above object",
+            description="moving to pick up object",
         ),
         PickPlaceStep(
             action="move",
             x=object_x,
             y=object_y,
-            z=PICK_Z,
+            z=object_z,
             r=ROBOT_R,
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=SLOW_MOVE_SPEED,
-            description="move down to pick",
+            description="descending to pick",
         ),
-        PickPlaceStep(action="close_gripper", description="grasp object"),
+        PickPlaceStep(action="close_gripper", description="grasping object"),
         PickPlaceStep(
             action="move",
             x=object_x,
             y=object_y,
-            z=HOVER_Z,
+            z=safe_hover_z,
             r=ROBOT_R,
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
-            description="lift object",
+            description="lifting object",
         ),
         PickPlaceStep(
             action="move",
             x=bin_x,
             y=bin_y,
-            z=HOVER_Z,
+            z=safe_hover_z,
             r=ROBOT_R,
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
-            description="move above bin",
+            description="moving to bin",
         ),
         PickPlaceStep(
             action="move",
             x=bin_x,
             y=bin_y,
-            z=DROP_Z,
+            z=actual_drop_z,
             r=ROBOT_R,
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=SLOW_MOVE_SPEED,
-            description="move down to drop",
+            description="moving to drop object",
         ),
-        PickPlaceStep(action="open_gripper", description="release object"),
+        PickPlaceStep(action="open_gripper", description="releasing object"),
         PickPlaceStep(
             action="move",
             x=bin_x,
             y=bin_y,
-            z=HOVER_Z,
+            z=safe_hover_z,
             r=ROBOT_R,
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
-            description="move above bin after release",
+            description="lifting clear of stack",
         ),
         PickPlaceStep(
             action="move",
@@ -125,7 +141,7 @@ def create_pick_place_plan(
             p=home_p,
             yaw=home_yaw,
             speed=DEFAULT_MOVE_SPEED,
-            description="return home",
+            description="returning to home",
         ),
     ]
 
@@ -144,16 +160,17 @@ def execute_step(robot, step:PickPlaceStep) -> None:
         r=step.r if step.r is not None else ROBOT_R,
         p=step.p if step.p is not None else ROBOT_P, 
         yaw=step.yaw if step.yaw is not None else ROBOT_YAW, 
-        speed=step.speed if step.speed is not None else DEFAULT_MOVE_SPEED)
+        speed=step.speed if step.speed is not None else DEFAULT_MOVE_SPEED,
+        description=step.description)
 
         return
 
     if step.action == "close_gripper":
-        robot.close_gripper()
+        robot.close_gripper(description=step.description)
         return
 
     if step.action == "open_gripper":
-        robot.open_gripper()
+        robot.open_gripper(description=step.description)
         return
 
     if step.action == "home":

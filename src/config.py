@@ -27,15 +27,55 @@ ROBOT_YAW = -90.0
 
 # Z heights for pick-and-place planning.
 HOVER_Z = 276.0
-PICK_Z = 176.0
-DROP_Z = 176.0
+PICK_Z = 13.0
+DROP_Z = 13.0
+PICK_Z_OFFSET = 80
+DROP_Z_OFFSET = 5.0
+
+# Kabsch 3D Calibration Constants
+import numpy as np
+import os
+import yaml
+
+# Default hardcoded fallbacks
+KABSCH_R = np.array([[ 0.97350537,  0.19850607, -0.11350167],
+ [ 0.2237692 , -0.92917506,  0.29421259],
+ [-0.04705994, -0.31181572, -0.94897646]])
+KABSCH_t = np.array([-230.47822236, -610.59690002,  983.93132354])
+CAMERA_FX = 606.558349609375
+CAMERA_FY = 605.9523315429688
+CAMERA_CX = 325.0482482910156
+CAMERA_CY = 252.42628479003906
+SURFACE_DEPTH = 1006.5
+
+# Load dynamic calibration if file exists
+KABSCH_CALIB_FILE = "kabsch_calibration.yaml"
+if os.path.exists(KABSCH_CALIB_FILE):
+    try:
+        with open(KABSCH_CALIB_FILE, "r") as f:
+            calib_data = yaml.safe_load(f)
+        if calib_data:
+            if "KABSCH_R" in calib_data:
+                KABSCH_R = np.array(calib_data["KABSCH_R"])
+            if "KABSCH_t" in calib_data:
+                KABSCH_t = np.array(calib_data["KABSCH_t"])
+            CAMERA_FX = calib_data.get("CAMERA_FX", CAMERA_FX)
+            CAMERA_FY = calib_data.get("CAMERA_FY", CAMERA_FY)
+            CAMERA_CX = calib_data.get("CAMERA_CX", CAMERA_CX)
+            CAMERA_CY = calib_data.get("CAMERA_CY", CAMERA_CY)
+            SURFACE_DEPTH = calib_data.get("SURFACE_DEPTH", SURFACE_DEPTH)
+            PICK_Z = calib_data.get("PICK_Z", PICK_Z)
+            DROP_Z = calib_data.get("DROP_Z", DROP_Z)
+            print(f"[Config] Dynamic 3D Kabsch calibration loaded from {KABSCH_CALIB_FILE}")
+    except Exception as e:
+        print(f"[Config Warning] Failed to parse {KABSCH_CALIB_FILE}: {e}. Falling back to default values.")
 
 # Default movement speeds for the fake planner.
 DEFAULT_MOVE_SPEED = 20.0
 SLOW_MOVE_SPEED = 10.0
 
 # Safe home pose: x, y, z, r, p, yaw.
-HOME_POSE = (0.0, -250.0, 300.0, ROBOT_R, ROBOT_P, ROBOT_YAW)
+HOME_POSE = (132.0, 0.0, 174.0, 180.0, -14.0, 0.0)
 
 # Real xArm hardware settings. Coordinate mapping is added later.
 ROBOT_IP = "192.168.1.152"

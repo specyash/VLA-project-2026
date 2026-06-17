@@ -20,6 +20,8 @@ def test_simulated_robot_records_commands() -> None:
         "CLOSE_GRIPPER",
         "OPEN_GRIPPER",
         "RECOVER",
+        "OPEN_GRIPPER",
+        "HOME",
     ]
 
 

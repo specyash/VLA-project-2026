@@ -58,7 +58,7 @@ def test_validate_xy_rejects_non_finite_values() -> None:
 def test_create_pick_place_plan_has_expected_action_order() -> None:
     """The planner should produce the standard safe pick-and-place sequence."""
 
-    plan = create_pick_place_plan(object_xy=(100, 200), bin_xy=(300, 400))
+    plan = create_pick_place_plan(object_xyz=(100, 200, PICK_Z), bin_xy=(300, 400), drop_z=DROP_Z)
 
     assert [step.action for step in plan] == [
         "move",
@@ -76,7 +76,7 @@ def test_create_pick_place_plan_has_expected_action_order() -> None:
 def test_create_pick_place_plan_uses_object_and_bin_coordinates() -> None:
     """Object moves should use object coordinates and bin moves should use bin coordinates."""
 
-    plan = create_pick_place_plan(object_xy=(100, 200), bin_xy=(300, 400))
+    plan = create_pick_place_plan(object_xyz=(100, 200, PICK_Z), bin_xy=(300, 400), drop_z=DROP_Z)
 
     assert plan[0].x == 100.0
     assert plan[0].y == 200.0
@@ -99,7 +99,7 @@ def test_execute_pick_place_plan_runs_on_simulated_robot() -> None:
     """A full plan should produce the expected fake robot command log."""
 
     robot = SimulatedRobot()
-    plan = create_pick_place_plan(object_xy=(100, 200), bin_xy=(300, 400))
+    plan = create_pick_place_plan(object_xyz=(100, 200, PICK_Z), bin_xy=(300, 400), drop_z=DROP_Z)
 
     execute_pick_place_plan(robot, plan)
 
@@ -109,4 +109,4 @@ def test_execute_pick_place_plan_runs_on_simulated_robot() -> None:
     assert command_log[0].startswith("MOVE x=100.0 y=200.0")
     assert command_log[2] == "CLOSE_GRIPPER"
     assert command_log[6] == "OPEN_GRIPPER"
-    assert command_log[-1].startswith("MOVE x=0.0 y=-250.0")
+    assert command_log[-1].startswith("MOVE x=132.0 y=0.0")
