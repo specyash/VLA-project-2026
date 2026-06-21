@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 import time
-import urllib.error
-import urllib.request
 
-from src.config import ROBOT_IP, GRIPPER_IP, MOVE_ACC, GRIPPER_HTTP_WAIT_SEC, GRIPPER_SDK_WAIT_SEC, HOME_POSE, RECOVER_WAIT_SEC, RECOVER_MOVE_SPEED
+from src.config import ROBOT_IP, MOVE_ACC, GRIPPER_SDK_WAIT_SEC, HOME_POSE, RECOVER_WAIT_SEC, RECOVER_MOVE_SPEED
 from src.voice.voice_worker import VoiceWorker
 
 class XArmRobotAdapter:
 
     def __init__(self, robot_ip:str | None = None, gripper_ip:str | None = None, dry_run:bool = False, use_voice:bool = True) -> None:
         self.robot_ip = robot_ip or ROBOT_IP
-        self.gripper_ip = gripper_ip or GRIPPER_IP
+        self.gripper_ip = gripper_ip
         self.dry_run = dry_run
         self.arm = None
         self._command_log: list[str] = []
@@ -137,37 +135,21 @@ class XArmRobotAdapter:
 
     def _gripper_action(self, state:int, command_name:str, description: str | None = None) -> None:
         
-        '''Implement gripper action with retries.
+        '''Implement gripper action.
             state 0 for open
             state 1 for close
-            Tries http first then sdk for fallback commands'''
+            Sends signal to TO 0 pin (TGPIO digital pin 0)'''
 
         if self.dry_run or self.arm is None:
             self._record(command_name, description)
             return
-        
-        if self._gripper_http(state):
-            self._record(command_name, description)
-            time.sleep(GRIPPER_HTTP_WAIT_SEC)
-            return
 
-        code = self.arm.set_cgpio_digital(0, state)
+        code = self.arm.set_tgpio_digital(0, state)
         if code != 0:
             raise RuntimeError(f"Gripper SDK command {command_name} failed with code: {code}")
 
         self._record(command_name, description)
         time.sleep(GRIPPER_SDK_WAIT_SEC)
-
-    def _gripper_http(self, state:int) -> bool:
-
-        '''Send gripper command via HTTP.'''
-
-        url = f"http://{self.gripper_ip}/gripper/{state}"
-        try:
-            with urllib.request.urlopen(url, timeout=2) as response:
-                return response.status == 200
-        except (urllib.error.URLError, TimeoutError) as e:
-            return False
 
     def _ensure_ready_for_motion(self) -> None:
 
