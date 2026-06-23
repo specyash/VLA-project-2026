@@ -21,7 +21,7 @@ YOLO_MODEL_PATH = "YOLO_MODEL/YOLO.pt"
 YOLO_IMAGE_SIZE = 640
 
 # Simulated robot pose defaults. These are in millimeters/degrees.
-ROBOT_R = -180.0
+ROBOT_R = 180.0
 ROBOT_P = 0.0
 ROBOT_YAW = -90.0
 
