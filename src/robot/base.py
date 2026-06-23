@@ -8,7 +8,7 @@ class RobotAdapter(Protocol):
     def home(self) -> None:
         """move the robot to the home position"""
 
-    def move_to_pose(self, s:float, y:float, z:float, r:float= -180.0, p:float=0.0, yaw:float= -90.0, speed:float=10.0) -> None:
+    def move_to_pose(self, x:float, y:float, z:float, r:float= -180.0, p:float=0.0, yaw:float= -90.0, speed:float=10.0, motion_type:str = "linear", description: str | None = None) -> None:
         """move the robot to a specific pose"""
 
     def open_gripper(self) -> None:

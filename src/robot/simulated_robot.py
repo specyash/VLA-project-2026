@@ -21,9 +21,10 @@ class SimulatedRobot:
         p: float = 0.0,
         yaw: float = -90.0,
         speed: float = 60.0,
+        motion_type: str = "linear",
         description: str | None = None,
     ) -> None:
-        command = (f"MOVE x={x:.1f} y={y:.1f} z={z:.1f} r={r:.1f} p={p:.1f} yaw={yaw:.1f} speed={speed:.1f}")
+        command = (f"MOVE x={x:.1f} y={y:.1f} z={z:.1f} r={r:.1f} p={p:.1f} yaw={yaw:.1f} speed={speed:.1f} motion_type={motion_type}")
         self._record(command)
 
     def open_gripper(self, description: str | None = None) -> None:

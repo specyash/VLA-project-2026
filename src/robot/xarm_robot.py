@@ -27,8 +27,8 @@ class XArmRobotAdapter:
 
         self._connect()
 
-    def move_to_pose(self, x:float, y:float, z:float, r:float = -180.0, p:float = 0.0, yaw:float = -90.0, speed:float = 20.0, description: str | None = None) -> None:
-        command = (f"MOVE x={x:.1f} y={y:.1f} z={z:.1f} r={r:.1f} p={p:.1f} yaw={yaw:.1f} speed={speed:.1f}")
+    def move_to_pose(self, x:float, y:float, z:float, r:float = -180.0, p:float = 0.0, yaw:float = -90.0, speed:float = 20.0, motion_type:str = "linear", description: str | None = None) -> None:
+        command = (f"MOVE x={x:.1f} y={y:.1f} z={z:.1f} r={r:.1f} p={p:.1f} yaw={yaw:.1f} speed={speed:.1f} motion_type={motion_type}")
 
         self._ensure_ready_for_motion()
 
@@ -39,7 +39,17 @@ class XArmRobotAdapter:
         if self.arm.error_code != 0:
             raise RuntimeError(f"Robot error: {self.arm.error_code}")
 
-        code = self.arm.set_position(x=x, y=y, z=z, roll=r, pitch=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
+        if motion_type == "joint":
+            # Compute inverse kinematics for joint angles (in degrees by default)
+            ik_code, joints = self.arm.get_inverse_kinematics([x, y, z, r, p, yaw], input_is_radian=False)
+            if ik_code == 0:
+                print(f"[xArm] Joint motion planned. Target joints: {[round(j, 2) for j in joints]}")
+                code = self.arm.set_servo_angle(angles=joints, speed=speed, wait=True, is_radian=False)
+            else:
+                print(f"[xArm Warning] IK failed with code {ik_code} for target x={x:.1f} y={y:.1f} z={z:.1f}. Falling back to Cartesian linear move.")
+                code = self.arm.set_position(x=x, y=y, z=z, roll=r, pitch=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
+        else:
+            code = self.arm.set_position(x=x, y=y, z=z, roll=r, pitch=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
 
         self._record(command, description)
 
@@ -49,7 +59,7 @@ class XArmRobotAdapter:
     def home(self) -> None:
         self._ensure_ready_for_motion()
         home_x, home_y, home_z, home_r, home_p, home_yaw = HOME_POSE
-        self.move_to_pose(x=home_x, y=home_y, z=home_z, r=home_r, p=home_p, yaw=home_yaw, description="Returning to home position.")
+        self.move_to_pose(x=home_x, y=home_y, z=home_z, r=home_r, p=home_p, yaw=home_yaw, motion_type="joint", description="Returning to home position.")
 
     def open_gripper(self, description: str | None = None) -> None:
         self._gripper_action(state=0, command_name="OPEN_GRIPPER", description=description)
@@ -78,13 +88,15 @@ class XArmRobotAdapter:
 
         home_x, home_y, home_z, home_r, home_p, home_yaw = HOME_POSE
         self.move_to_pose(
-            home_x,
-            home_y,
-            home_z,
-            home_r,
-            home_p,
-            home_yaw,
+            x=home_x,
+            y=home_y,
+            z=home_z,
+            r=home_r,
+            p=home_p,
+            yaw=home_yaw,
             speed=RECOVER_MOVE_SPEED,
+            motion_type="joint",
+            description="Returning to home position after recovery."
         )
 
     def emergency_stop(self, reason: str = "manual") -> None:

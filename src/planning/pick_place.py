@@ -24,6 +24,9 @@ class PickPlaceStep:
     # Movement speed for move actions.
     speed: float | None = None
 
+    # Motion type: "linear" or "joint"
+    motion_type: str = "linear"
+
     # Short human-readable reason for this step.
     description: str = ""
 
@@ -73,6 +76,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
+            motion_type="joint",
             description="moving to pick up object",
         ),
         PickPlaceStep(
@@ -84,6 +88,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=SLOW_MOVE_SPEED,
+            motion_type="linear",
             description="descending to pick",
         ),
         PickPlaceStep(action="close_gripper", description="grasping object"),
@@ -96,6 +101,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
+            motion_type="linear",
             description="lifting object",
         ),
         PickPlaceStep(
@@ -107,6 +113,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
+            motion_type="joint",
             description="moving to bin",
         ),
         PickPlaceStep(
@@ -118,6 +125,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=SLOW_MOVE_SPEED,
+            motion_type="linear",
             description="moving to drop object",
         ),
         PickPlaceStep(action="open_gripper", description="releasing object"),
@@ -130,6 +138,7 @@ def create_pick_place_plan(
             p=ROBOT_P,
             yaw=ROBOT_YAW,
             speed=DEFAULT_MOVE_SPEED,
+            motion_type="linear",
             description="lifting clear of stack",
         ),
         PickPlaceStep(
@@ -141,6 +150,7 @@ def create_pick_place_plan(
             p=home_p,
             yaw=home_yaw,
             speed=DEFAULT_MOVE_SPEED,
+            motion_type="joint",
             description="returning to home",
         ),
     ]
@@ -161,6 +171,7 @@ def execute_step(robot, step:PickPlaceStep) -> None:
         p=step.p if step.p is not None else ROBOT_P, 
         yaw=step.yaw if step.yaw is not None else ROBOT_YAW, 
         speed=step.speed if step.speed is not None else DEFAULT_MOVE_SPEED,
+        motion_type=step.motion_type,
         description=step.description)
 
         return
