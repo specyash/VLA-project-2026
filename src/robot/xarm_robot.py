@@ -39,7 +39,7 @@ class XArmRobotAdapter:
         if self.arm.error_code != 0:
             raise RuntimeError(f"Robot error: {self.arm.error_code}")
 
-        code = self.arm.set_position(x=x, y=y, z=z, r=r, p=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
+        code = self.arm.set_position(x=x, y=y, z=z, roll=r, pitch=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
 
         self._record(command, description)
 

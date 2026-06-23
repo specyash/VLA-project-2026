@@ -77,11 +77,9 @@ class VoiceWorker(threading.Thread):
 
         while True:
             text = self.queue.get()
-            
             # None will be used as the termination signal
             if text is None:
                 break
-                
             try:
                 # Generate a unique temporary WAV file name to avoid collisions
                 filename = f"temp_piper_{int(time.time() * 1000)}.wav"
