@@ -44,7 +44,7 @@ class XArmRobotAdapter:
             ik_code, joints = self.arm.get_inverse_kinematics([x, y, z, r, p, yaw], input_is_radian=False)
             if ik_code == 0:
                 print(f"[xArm] Joint motion planned. Target joints: {[round(j, 2) for j in joints]}")
-                code = self.arm.set_servo_angle(angles=joints, speed=speed, wait=True, is_radian=False)
+                code = self.arm.set_servo_angle(angle=joints, speed=speed, wait=True, is_radian=False)
             else:
                 print(f"[xArm Warning] IK failed with code {ik_code} for target x={x:.1f} y={y:.1f} z={z:.1f}. Falling back to Cartesian linear move.")
                 code = self.arm.set_position(x=x, y=y, z=z, roll=r, pitch=p, yaw=yaw, speed=speed, mvacc=MOVE_ACC, wait=True)
