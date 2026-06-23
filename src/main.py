@@ -26,7 +26,7 @@ def main():
     print("[System] initializing integration pipeline...")
     
     # Initialize robot first
-    robot = XArmRobotAdapter(dry_run=True)
+    robot = XArmRobotAdapter(dry_run=False)
     
     # Move robot to home position
     print("[System] Moving robot to home position...")

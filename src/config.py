@@ -30,7 +30,7 @@ HOVER_Z = 276.0
 PICK_Z = 13.0
 DROP_Z = 13.0
 PICK_Z_OFFSET = 80
-DROP_Z_OFFSET = 5.0
+DROP_Z_OFFSET = 15.0
 
 # Kabsch 3D Calibration Constants
 import numpy as np
@@ -71,11 +71,12 @@ if os.path.exists(KABSCH_CALIB_FILE):
         print(f"[Config Warning] Failed to parse {KABSCH_CALIB_FILE}: {e}. Falling back to default values.")
 
 # Default movement speeds for the fake planner.
-DEFAULT_MOVE_SPEED = 20.0
-SLOW_MOVE_SPEED = 10.0
+DEFAULT_MOVE_SPEED = 50.0
+SLOW_MOVE_SPEED = 30.0
 
 # Safe home pose: x, y, z, r, p, yaw.
 HOME_POSE = (132.0, 0.0, 174.0, 180.0, -14.0, 0.0)
+#HOME_POSE = (201.0, -40.0, 188.0, 180.0, -19, -8)
 
 # Real xArm hardware settings. Coordinate mapping is added later.
 ROBOT_IP = "192.168.1.152"
@@ -84,7 +85,7 @@ MOVE_ACC = 500.0
 
 # Time to wait after gripper commands.
 GRIPPER_HTTP_WAIT_SEC = 3.0
-GRIPPER_SDK_WAIT_SEC = 1.0
+GRIPPER_SDK_WAIT_SEC = 3.0
 
 # Collision and safety settings from the old xArm setup.
 COLLISION_SENSITIVITY = 3

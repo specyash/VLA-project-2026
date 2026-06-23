@@ -8,27 +8,29 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.robot.xarm_robot import XArmRobotAdapter
 
 def main():
-    print("=== Testing Real xArm Custom Gripper (TGPIO Pin 0) ===")
+    print("=== Testing Real xArm Gripper (Open then Close) ===")
     
-    # Initialize the adapter with dry_run=False (real hardware) and use_voice=False for simplicity
+    # Initialize the adapter with dry_run=False (real hardware) and use_voice=True
     try:
-        robot = XArmRobotAdapter(dry_run=False, use_voice=False)
+        robot = XArmRobotAdapter(dry_run=False, use_voice=True)
     except Exception as e:
         print(f"Failed to connect or initialize: {e}")
         return
 
     try:
-        print("\n--- Command: Open Gripper (TGPIO 0 = 0) ---")
+        print("\n--- Command: Open Gripper ---")
         robot.open_gripper(description="opening gripper")
-        time.sleep(2)
+        time.sleep(3.0)
 
-        print("\n--- Command: Close Gripper (TGPIO 0 = 1) ---")
+        print("\n--- Command: Close Gripper ---")
         robot.close_gripper(description="closing gripper")
-        time.sleep(2)
+        time.sleep(3.0)
 
-        print("\n--- Command: Open Gripper (TGPIO 0 = 0) ---")
-        robot.open_gripper(description="opening gripper again")
-        time.sleep(1)
+        # Wait for any background TTS speech to finish
+        if robot.voice and robot.voice.active:
+            print("\nWaiting for TTS voice output to finish playing...")
+            robot.voice.queue.join()
+            time.sleep(2.0)
 
     except Exception as e:
         print(f"An error occurred during execution: {e}")
