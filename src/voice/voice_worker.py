@@ -5,6 +5,23 @@ import os
 import wave
 import platform
 import subprocess
+import atexit
+import glob
+
+# Dedicated folder for temporary Piper WAV files (data/voice/tmp_audio/)
+TMP_AUDIO_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "data", "voice", "tmp_audio",
+)
+
+
+def cleanup_tmp_audio():
+    """Delete every leftover WAV in the temp audio folder."""
+    for f in glob.glob(os.path.join(TMP_AUDIO_DIR, "*.wav")):
+        try:
+            os.remove(f)
+        except OSError:
+            pass
 
 try:
     from piper import PiperVoice
@@ -18,6 +35,12 @@ class VoiceWorker(threading.Thread):
         self.queue = queue.Queue()
         self.active = False
         self.voice = None
+
+        # Prepare the temp audio folder: remove leftovers from previous (crashed/interrupted)
+        # runs now, and clear it again when the program exits.
+        os.makedirs(TMP_AUDIO_DIR, exist_ok=True)
+        cleanup_tmp_audio()
+        atexit.register(cleanup_tmp_audio)
 
         if not piper_ready:
             print("[VOICE INIT ERROR]: 'piper-tts' is not installed. Please run: pip install piper-tts")
@@ -80,22 +103,21 @@ class VoiceWorker(threading.Thread):
             # None will be used as the termination signal
             if text is None:
                 break
+            # Generate a unique temporary WAV file name to avoid collisions
+            filename = os.path.join(TMP_AUDIO_DIR, f"temp_piper_{int(time.time() * 1000)}.wav")
             try:
-                # Generate a unique temporary WAV file name to avoid collisions
-                filename = f"temp_piper_{int(time.time() * 1000)}.wav"
-                
                 # rendering speech->wav file
                 with wave.open(filename, "wb") as wav_file:
                     self.voice.synthesize_wav(text, wav_file)
-                
+
                 # audio will now play
                 self.play_audio(filename)
-                
-                # now we cleanup the temp files
-                if os.path.exists(filename):
-                    os.remove(filename)
             except Exception as e:
                 print(f"[VOICE WORKER ERROR]: {e}")
+            finally:
+                # always clean up the temp file, even if synthesis/playback failed
+                if os.path.exists(filename):
+                    os.remove(filename)
             # giving out small timeouts to avoid cpu load
             time.sleep(0.1) 
             self.queue.task_done()

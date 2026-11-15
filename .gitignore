@@ -1,2 +1,5 @@
 generated/
 OLD/
+# Piper TTS temporary audio
+data/voice/tmp_audio/
+temp_piper_*.wav
